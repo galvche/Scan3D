@@ -10,15 +10,13 @@ const viewsList = document.getElementById('views-list');
 
 let views = [];
 const steps = [
-    'Coloca una referencia de tamaño conocida (por ejemplo, una tarjeta de crédito o regla) junto al objeto y captura la vista FRONTAL.',
-    'Gira el objeto y captura la vista TRASERA.',
-    'Gira el objeto y captura la vista LATERAL IZQUIERDA.',
-    'Gira el objeto y captura la vista LATERAL DERECHA.'
+    'Captura la vista FRONTAL del objeto.',
+    'Captura la vista TRASERA del objeto.',
+    'Captura la vista LATERAL IZQUIERDA.',
+    'Captura la vista LATERAL DERECHA.'
 ];
 let currentStep = 0;
-let referenceSizeCm = 8.5; // ancho de una tarjeta de crédito estándar
-let pxPerCm = null;
-const stepInstructions = document.getElementById('step-instructions');
+const banner = document.getElementById('banner');
 
 const cameraErrorDiv = document.getElementById('camera-error');
 
@@ -58,16 +56,19 @@ async function startCamera() {
 activateCameraBtn.addEventListener('click', () => {
     currentStep = 0;
     views = [];
-    pxPerCm = null;
-    updateStepInstructions();
+    updateBanner();
     startCamera();
 });
 
-function updateStepInstructions() {
+function updateBanner(msg) {
+    if (msg) {
+        banner.textContent = msg;
+        return;
+    }
     if (currentStep < steps.length) {
-        stepInstructions.textContent = steps[currentStep];
+        banner.textContent = steps[currentStep];
     } else {
-        stepInstructions.textContent = '¡Listo! Procesando el volumen estimado...';
+        banner.textContent = '¡Listo! Procesando el volumen estimado...';
     }
 }
 
@@ -77,23 +78,12 @@ captureBtn.addEventListener('click', () => {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    // En la primera vista, pedir al usuario que marque la referencia
-    if (currentStep === 0) {
-        // Simulación: pedir al usuario el tamaño de la referencia en la imagen
-        let px = prompt('¿Cuántos píxeles mide la referencia (tarjeta/regla) en la imagen? (usa una app de medición o estima el ancho en la foto)');
-        px = parseFloat(px);
-        if (!px || px <= 0) {
-            alert('Debes indicar el tamaño en píxeles de la referencia.');
-            return;
-        }
-        pxPerCm = px / referenceSizeCm;
-    }
     // Simulación de detección de objeto y cálculo de dimensiones
     const simulated = simulateObjectDetection(canvas.width, canvas.height);
     views.push(simulated);
     updateViewsList();
     currentStep++;
-    updateStepInstructions();
+    updateBanner();
     if (currentStep === steps.length) {
         showResults(views);
     }
@@ -132,7 +122,7 @@ function simulateObjectDetection(width, height) {
 }
 
 function showResults(views) {
-    if (views.length < 4 || !pxPerCm) {
+    if (views.length < 4) {
         clearResults();
         return;
     }
@@ -140,14 +130,9 @@ function showResults(views) {
     const maxWidthPx = Math.max(...views.map(v => v.width));
     const maxHeightPx = Math.max(...views.map(v => v.height));
     const maxDepthPx = Math.max(...views.map(v => v.depth));
-    // Convertir a cm
-    const widthCm = (maxWidthPx / pxPerCm).toFixed(1);
-    const heightCm = (maxHeightPx / pxPerCm).toFixed(1);
-    const depthCm = (maxDepthPx / pxPerCm).toFixed(1);
-    const volumeCm3 = (widthCm * heightCm * depthCm).toFixed(0);
-    const volumeM3 = (volumeCm3 / 1e6).toFixed(4);
-    dimensionsDiv.textContent = `Medidas estimadas: Largo: ${widthCm} cm, Alto: ${heightCm} cm, Ancho: ${depthCm} cm`;
-    percentageDiv.textContent = `Volumen estimado: ${volumeCm3} cm³ (${volumeM3} m³)`;
+    const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
+    dimensionsDiv.textContent = `Medidas estimadas: Largo: ${maxWidthPx} px, Alto: ${maxHeightPx} px, Ancho: ${maxDepthPx} px`;
+    percentageDiv.textContent = `Volumen estimado: ${volumePx3} px³ (estimación relativa)`;
     render3DObject(maxWidthPx, maxHeightPx, maxDepthPx, 400, true);
 }
 
