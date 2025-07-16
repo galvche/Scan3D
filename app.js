@@ -1,6 +1,7 @@
 // Acceso a la cámara trasera
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
+const overlay = document.getElementById('overlay');
 const captureBtn = document.getElementById('capture');
 const resetBtn = document.getElementById('reset');
 const dimensionsDiv = document.getElementById('dimensions');
@@ -16,6 +17,9 @@ const steps = [
     'Captura la vista LATERAL DERECHA.'
 ];
 let currentStep = 0;
+let pxPerCm = null;
+let markingReference = false;
+let refPoints = [];
 const banner = document.getElementById('banner');
 
 const cameraErrorDiv = document.getElementById('camera-error');
@@ -23,6 +27,39 @@ const cameraErrorDiv = document.getElementById('camera-error');
 
 const activateCameraBtn = document.getElementById('activate-camera');
 const cameraActivateContainer = document.getElementById('camera-activate-container');
+
+function drawOverlayBox() {
+    overlay.width = video.videoWidth;
+    overlay.height = video.videoHeight;
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    // Dibuja un recuadro central para guiar al usuario
+    const boxSize = Math.floor(Math.min(overlay.width, overlay.height) * 0.7);
+    const x = (overlay.width - boxSize) / 2;
+    const y = (overlay.height - boxSize) / 2;
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([16, 10]);
+    ctx.strokeRect(x, y, boxSize, boxSize);
+    ctx.setLineDash([]);
+    // Si está marcando referencia, dibuja los puntos
+    if (markingReference && refPoints.length > 0) {
+        ctx.fillStyle = '#ff4c4c';
+        refPoints.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        });
+        if (refPoints.length === 2) {
+            ctx.strokeStyle = '#ff4c4c';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(refPoints[0].x, refPoints[0].y);
+            ctx.lineTo(refPoints[1].x, refPoints[1].y);
+            ctx.stroke();
+        }
+    }
+}
 
 async function startCamera() {
     try {
@@ -36,6 +73,17 @@ async function startCamera() {
         captureBtn.style.display = '';
         resetBtn.style.display = '';
         cameraActivateContainer.style.display = 'none';
+        // Ajustar overlay al tamaño del video
+        video.onloadedmetadata = () => {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+            drawOverlayBox();
+        };
+        video.onplay = () => {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+            drawOverlayBox();
+        };
     } catch (err) {
         try {
             // Si no se puede acceder a la cámara trasera, usar la predeterminada
@@ -56,6 +104,9 @@ async function startCamera() {
 activateCameraBtn.addEventListener('click', () => {
     currentStep = 0;
     views = [];
+    pxPerCm = null;
+    markingReference = false;
+    refPoints = [];
     updateBanner();
     startCamera();
 });
@@ -78,6 +129,42 @@ captureBtn.addEventListener('click', () => {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (currentStep === 0 && !pxPerCm) {
+        // Pedir al usuario que marque la referencia
+        markingReference = true;
+        refPoints = [];
+        updateBanner('Marca los extremos de la referencia (por ejemplo, una tarjeta) tocando sobre la imagen.');
+        drawOverlayBox();
+        overlay.style.pointerEvents = 'auto';
+        overlay.onclick = function(e) {
+            const rect = overlay.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (overlay.width / rect.width);
+            const y = (e.clientY - rect.top) * (overlay.height / rect.height);
+            refPoints.push({x, y});
+            drawOverlayBox();
+            if (refPoints.length === 2) {
+                overlay.style.pointerEvents = 'none';
+                markingReference = false;
+                // Calcular distancia en píxeles
+                const dx = refPoints[0].x - refPoints[1].x;
+                const dy = refPoints[0].y - refPoints[1].y;
+                const distPx = Math.sqrt(dx*dx + dy*dy);
+                // Asumimos tarjeta de crédito estándar (8.5cm)
+                pxPerCm = distPx / 8.5;
+                updateBanner();
+                // Simulación de detección de objeto y cálculo de dimensiones
+                const simulated = simulateObjectDetection(canvas.width, canvas.height);
+                views.push(simulated);
+                updateViewsList();
+                currentStep++;
+                updateBanner();
+                if (currentStep === steps.length) {
+                    showResults(views);
+                }
+            }
+        };
+        return;
+    }
     // Simulación de detección de objeto y cálculo de dimensiones
     const simulated = simulateObjectDetection(canvas.width, canvas.height);
     views.push(simulated);
@@ -110,10 +197,11 @@ function clearResults() {
 }
 
 function simulateObjectDetection(width, height) {
-    // Simula un objeto de tamaño aleatorio dentro del área de la imagen
-    const objWidth = Math.floor(width * (0.3 + Math.random() * 0.4));
-    const objHeight = Math.floor(height * (0.3 + Math.random() * 0.4));
-    const objDepth = Math.floor((objWidth + objHeight) / 4 + Math.random() * 30);
+    // Simula un objeto centrado dentro del recuadro overlay
+    const boxSize = Math.floor(Math.min(width, height) * 0.7);
+    const objWidth = boxSize * (0.9 + Math.random() * 0.1); // 90-100% del recuadro
+    const objHeight = boxSize * (0.9 + Math.random() * 0.1);
+    const objDepth = boxSize * (0.7 + Math.random() * 0.2); // profundidad algo menor
     return {
         width: objWidth,
         height: objHeight,
@@ -130,11 +218,34 @@ function showResults(views) {
     const maxWidthPx = Math.max(...views.map(v => v.width));
     const maxHeightPx = Math.max(...views.map(v => v.height));
     const maxDepthPx = Math.max(...views.map(v => v.depth));
-    const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
-    dimensionsDiv.textContent = `Medidas estimadas: Largo: ${maxWidthPx} px, Alto: ${maxHeightPx} px, Ancho: ${maxDepthPx} px`;
-    percentageDiv.textContent = `Volumen estimado: ${volumePx3} px³ (estimación relativa)`;
+    let dimsText = `Medidas estimadas: Largo: ${maxWidthPx} px, Alto: ${maxHeightPx} px, Ancho: ${maxDepthPx} px`;
+    let volText = '';
+    if (pxPerCm) {
+        const widthCm = (maxWidthPx / pxPerCm).toFixed(1);
+        const heightCm = (maxHeightPx / pxPerCm).toFixed(1);
+        const depthCm = (maxDepthPx / pxPerCm).toFixed(1);
+        const volumeCm3 = (widthCm * heightCm * depthCm).toFixed(0);
+        const volumeM3 = (volumeCm3 / 1e6).toFixed(4);
+        dimsText = `Medidas estimadas: Largo: ${widthCm} cm, Alto: ${heightCm} cm, Ancho: ${depthCm} cm`;
+        volText = `Volumen estimado: ${volumeCm3} cm³ (${volumeM3} m³)`;
+    } else {
+        const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
+        volText = `Volumen estimado: ${volumePx3} px³ (estimación relativa)`;
+    }
+    dimensionsDiv.textContent = dimsText;
+    percentageDiv.textContent = volText;
     render3DObject(maxWidthPx, maxHeightPx, maxDepthPx, 400, true);
 }
+// Redibujar overlay en cada frame de video
+video.addEventListener('play', function() {
+    function loop() {
+        if (!video.paused && !video.ended) {
+            drawOverlayBox();
+            requestAnimationFrame(loop);
+        }
+    }
+    loop();
+});
 
 function render3DObject(objWidth, objHeight, objDepth, cubeSize, darkMode = false) {
     threejsContainer.innerHTML = '';
