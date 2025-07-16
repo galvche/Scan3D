@@ -13,7 +13,10 @@
     <div id="camera-activate-container" style="text-align:center; margin:32px 0;">
         <button id="activate-camera" style="padding:16px 36px; font-size:1.2rem; border-radius:12px; background:#0078d7; color:#fff; border:none; cursor:pointer;">Activar cámara</button>
     </div>
-    <video id="video" autoplay playsinline style="display:none;"></video>
+    <div class="camera-container" style="position:relative; width:100vw; max-width:420px; aspect-ratio:1/1; margin:0 auto;">
+        <video id="video" autoplay playsinline style="width:100%; height:100%; object-fit:cover; border-radius:16px; background:#222; position:absolute; left:0; top:0;"></video>
+        <canvas id="overlay" style="position:absolute; left:0; top:0; width:100%; height:100%; border-radius:16px; z-index:2;"></canvas>
+    </div>
     <div style="text-align:center; margin-bottom:10px;">
         <button id="capture" style="display:none;">Añadir vista</button>
         <button id="reset" style="display:none;">Reiniciar escaneo</button>
