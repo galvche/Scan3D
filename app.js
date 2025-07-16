@@ -495,4 +495,3 @@ function render3DObject(objWidth, objHeight, objDepth, cubeSize, darkMode = fals
     }
     animate();
 }
-// fin
