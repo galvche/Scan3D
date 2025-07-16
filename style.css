@@ -16,16 +16,20 @@ h1 {
     margin-bottom: 8px;
     font-size: 2.3rem;
 }
- .camera-container {
+.camera-container {
     position: relative;
     width: 100vw;
     max-width: 420px;
     aspect-ratio: 1/1;
     margin: 0 auto 18px auto;
     background: #000;
-    border-radius: 16px;
+    border-radius: 18px;
     box-shadow: 0 4px 24px #0008;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
 }
 #video {
     position: absolute;
@@ -33,23 +37,29 @@ h1 {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 16px;
+    border-radius: 18px;
     background: #000;
     z-index: 1;
     display: block;
+    aspect-ratio: 1/1;
+    min-width: 0;
+    min-height: 0;
 }
 #overlay {
     position: absolute;
     left: 0; top: 0;
     width: 100%;
     height: 100%;
-    border-radius: 16px;
+    border-radius: 18px;
     z-index: 2;
     background: transparent;
     touch-action: none;
     pointer-events: auto;
     box-shadow: 0 0 24px 0 #00eaff44;
     animation: overlayPulse 1.2s infinite alternate;
+    aspect-ratio: 1/1;
+    min-width: 0;
+    min-height: 0;
 }
 @keyframes overlayPulse {
     0% { box-shadow: 0 0 24px 0 #00eaff44; }
@@ -163,10 +173,16 @@ h1 {
         max-width: 96vw;
         border-radius: 10vw;
         background: #000;
+        aspect-ratio: 1/1;
     }
     #video, #overlay {
         border-radius: 10vw;
         background: #000;
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 1/1;
+        min-width: 0;
+        min-height: 0;
     }
     #video, #threejs-container {
         width: 98vw;
