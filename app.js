@@ -113,7 +113,7 @@ activateCameraBtn.addEventListener('click', () => {
 
 function updateBanner(msg) {
     if (msg) {
-        banner.textContent = msg;
+        banner.innerHTML = msg;
         return;
     }
     if (currentStep < steps.length) {
@@ -125,17 +125,18 @@ function updateBanner(msg) {
 
 captureBtn.addEventListener('click', () => {
     if (currentStep >= steps.length) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     if (currentStep === 0 && !pxPerCm) {
-        // Pedir al usuario que marque la referencia
+        // Mostrar overlay interactivo antes de capturar
         markingReference = true;
         refPoints = [];
-        updateBanner('Marca los extremos de la referencia (por ejemplo, una tarjeta) tocando sobre la imagen.');
+        updateBanner('<b>Marca los extremos de la referencia:</b><br>' +
+          '<span style="font-size:1.5em;">💳</span><br>' +
+          '1. Coloca una tarjeta de crédito, regla o cualquier objeto cuyo tamaño conozcas dentro del recuadro dorado.<br>' +
+          '2. Toca sobre la imagen los dos extremos de ese objeto.<br>' +
+          '<span style="font-size:0.95em;color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span>');
         drawOverlayBox();
         overlay.style.pointerEvents = 'auto';
+        captureBtn.disabled = true;
         overlay.onclick = function(e) {
             const rect = overlay.getBoundingClientRect();
             const x = (e.clientX - rect.left) * (overlay.width / rect.width);
@@ -152,19 +153,15 @@ captureBtn.addEventListener('click', () => {
                 // Asumimos tarjeta de crédito estándar (8.5cm)
                 pxPerCm = distPx / 8.5;
                 updateBanner();
-                // Simulación de detección de objeto y cálculo de dimensiones
-                const simulated = simulateObjectDetection(canvas.width, canvas.height);
-                views.push(simulated);
-                updateViewsList();
-                currentStep++;
-                updateBanner();
-                if (currentStep === steps.length) {
-                    showResults(views);
-                }
+                captureBtn.disabled = false;
             }
         };
         return;
     }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     // Simulación de detección de objeto y cálculo de dimensiones
     const simulated = simulateObjectDetection(canvas.width, canvas.height);
     views.push(simulated);
