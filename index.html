@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan3D App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Scan3D App</h1>
+    <div id="camera-error" style="display:none; color:#c00; text-align:center; margin:16px 0; font-weight:bold;"></div>
+    <div id="camera-activate-container" style="text-align:center; margin:32px 0;">
+        <button id="activate-camera" style="padding:16px 36px; font-size:1.2rem; border-radius:12px; background:#0078d7; color:#fff; border:none; cursor:pointer;">Activar cámara</button>
+    </div>
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <div style="text-align:center; margin-bottom:10px;">
+        <button id="capture" style="display:none;">Añadir vista</button>
+        <button id="reset" style="display:none;">Reiniciar escaneo</button>
+    </div>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="views-list" style="text-align:center; margin-bottom:10px;"></div>
+    <div id="result">
+        <div id="dimensions"></div>
+        <div id="percentage"></div>
+        <div id="threejs-container" style="width: 400px; height: 400px;"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
