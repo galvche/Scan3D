@@ -106,7 +106,7 @@ function drawOverlayBox() {
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
+            video: { ideal: 'environment' },
             audio: false
         });
     cameraHelp.style.display = 'none';
