@@ -134,7 +134,11 @@ activateCameraBtn.addEventListener('click', () => {
     refRect = null;
     objRects = [];
     mode = 'reference';
-    updateBanner('<b>Ajusta el rectángulo azul a tu tarjeta de crédito o regla y pulsa "Capturar referencia".</b><br><span style="font-size:1.5em;">💳</span><br>Esto servirá para calcular las medidas reales del objeto.');
+    updateBanner('<b>Paso 1: Referencia de escala</b><br>' +
+      '<span style="font-size:1.5em;">💳</span><br>' +
+      'Ajusta el rectángulo azul para que encierre tu tarjeta de crédito, DNI o regla (8.5cm de ancho recomendado).<br>' +
+      '<span style="color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span><br>' +
+      '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
     startCamera();
     video.onloadedmetadata = () => {
         overlay.width = video.videoWidth;
@@ -164,7 +168,10 @@ captureBtn.addEventListener('click', () => {
         pxPerCm = refRect.w / 8.5;
         mode = 'object';
         currentStep = 0;
-        updateBanner(steps[currentStep]);
+        updateBanner('<b>Paso 2: Escaneo del objeto</b><br>' +
+          '<span style="font-size:1.3em;">📦</span><br>' +
+          'Ajusta el rectángulo dorado para que encierre el objeto desde la vista <b>frontal</b> y pulsa "Capturar vista".<br>' +
+          '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
         captureBtn.textContent = 'Capturar vista';
         drawOverlayBox();
         return;
@@ -189,10 +196,15 @@ captureBtn.addEventListener('click', () => {
         });
         currentStep++;
         if (currentStep < steps.length) {
-            updateBanner(steps[currentStep]);
+            let viewName = steps[currentStep].replace('Captura la ', '').replace(' del objeto.', '');
+            updateBanner('<b>Paso 2: Escaneo del objeto</b><br>' +
+              '<span style="font-size:1.3em;">📦</span><br>' +
+              'Ajusta el rectángulo dorado para la vista <b>' + viewName + '</b> y pulsa "Capturar vista".<br>' +
+              '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
             drawOverlayBox();
         } else {
             mode = 'done';
+            updateBanner('<b>¡Escaneo completo!</b><br>Procesando medidas y volumen...');
             showResults(views);
         }
     }
@@ -299,7 +311,7 @@ function showResults(views) {
     const maxWidthPx = Math.max(...views.map(v => v.width));
     const maxHeightPx = Math.max(...views.map(v => v.height));
     const maxDepthPx = Math.max(...views.map(v => v.depth));
-    let dimsText = `Medidas estimadas: Largo: ${maxWidthPx} px, Alto: ${maxHeightPx} px, Ancho: ${maxDepthPx} px`;
+    let dimsText = `Medidas estimadas:<br><b>Largo:</b> ${maxWidthPx} px<br><b>Alto:</b> ${maxHeightPx} px<br><b>Ancho:</b> ${maxDepthPx} px`;
     let volText = '';
     if (pxPerCm) {
         const widthCm = (maxWidthPx / pxPerCm).toFixed(1);
@@ -307,14 +319,14 @@ function showResults(views) {
         const depthCm = (maxDepthPx / pxPerCm).toFixed(1);
         const volumeCm3 = (widthCm * heightCm * depthCm).toFixed(0);
         const volumeM3 = (volumeCm3 / 1e6).toFixed(4);
-        dimsText = `Medidas estimadas: Largo: ${widthCm} cm, Alto: ${heightCm} cm, Ancho: ${depthCm} cm`;
-        volText = `Volumen estimado: ${volumeCm3} cm³ (${volumeM3} m³)`;
+        dimsText = `Medidas estimadas:<br><b>Largo:</b> ${widthCm} cm<br><b>Alto:</b> ${heightCm} cm<br><b>Ancho:</b> ${depthCm} cm`;
+        volText = `<b>Volumen estimado:</b> ${volumeCm3} cm³<br>(${volumeM3} m³)`;
     } else {
         const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
-        volText = `Volumen estimado: ${volumePx3} px³ (estimación relativa)`;
+        volText = `<b>Volumen estimado:</b> ${volumePx3} px³ (estimación relativa)`;
     }
-    dimensionsDiv.textContent = dimsText;
-    percentageDiv.textContent = volText;
+    dimensionsDiv.innerHTML = dimsText;
+    percentageDiv.innerHTML = volText;
     render3DObject(maxWidthPx, maxHeightPx, maxDepthPx, 400, true);
 }
 // Redibujar overlay en cada frame de video
