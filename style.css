@@ -1,6 +1,6 @@
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
-    background: #f8fafc;
+    background: #181a20;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -15,9 +15,10 @@ h1 {
 #video {
     display: block;
     margin: 32px auto 16px auto;
-    width: 90vw;
+    width: 95vw;
     max-width: 420px;
-    height: 240px;
+    aspect-ratio: 1/1;
+    height: auto;
     background: #222;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.18);
@@ -76,7 +77,18 @@ h1 {
     margin-top: 24px;
     text-align: center;
 }
-#dimensions, #percentage {
+#banner {
+    background: #23272f;
+    color: #ffd700;
+    text-align: center;
+    font-size: 1.1rem;
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 18px auto 10px auto;
+    max-width: 420px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+ #dimensions, #percentage {
     font-size: 1.1rem;
     margin: 8px 0;
     color: #f1f1f1;
