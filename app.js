@@ -8,6 +8,9 @@ const dimensionsDiv = document.getElementById('dimensions');
 const percentageDiv = document.getElementById('percentage');
 const threejsContainer = document.getElementById('threejs-container');
 const viewsList = document.getElementById('views-list');
+const progressBarFill = document.getElementById('progress-bar-fill');
+const progressLabel = document.getElementById('progress-label');
+const loadingSpinner = document.getElementById('loading-spinner');
 
 let views = [];
 const steps = [
@@ -150,63 +153,71 @@ activateCameraBtn.addEventListener('click', () => {
     captureBtn.disabled = false;
 });
 
+
+function updateProgressBar() {
+    let totalSteps = 1 + steps.length; // referencia + vistas
+    let current = mode === 'reference' ? 1 : (mode === 'object' ? currentStep + 2 : totalSteps);
+    let percent = Math.round((current / totalSteps) * 100);
+    progressBarFill.style.width = percent + '%';
+    progressLabel.textContent = `Paso ${current}/${totalSteps}`;
+}
+
 function updateBanner(msg) {
+    updateProgressBar();
     if (msg) {
         banner.innerHTML = msg;
         return;
     }
     if (currentStep < steps.length) {
-        banner.textContent = steps[currentStep];
+        let viewName = steps[currentStep].replace('Captura la ', '').replace(' del objeto.', '');
+        banner.innerHTML = `<b>Paso 2: Escaneo del objeto</b><br><span style="font-size:1.3em;">📦</span><br>Vista <b>${viewName}</b> (${currentStep+1}/4)<br><span style="font-size:0.95em; color:#aaa;">Ajusta el recuadro dorado y pulsa "Añadir vista"</span>`;
     } else {
-        banner.textContent = '¡Listo! Procesando el volumen estimado...';
+        banner.innerHTML = '<b>¡Listo!</b><br>Procesando el volumen estimado...';
     }
 }
 
+
 captureBtn.addEventListener('click', () => {
     if (mode === 'reference') {
-        // Calcular px/cm usando el ancho del rectángulo (asume 8.5cm)
         pxPerCm = refRect.w / 8.5;
         mode = 'object';
         currentStep = 0;
-        updateBanner('<b>Paso 2: Escaneo del objeto</b><br>' +
-          '<span style="font-size:1.3em;">📦</span><br>' +
-          'Ajusta el rectángulo dorado para que encierre el objeto desde la vista <b>frontal</b> y pulsa "Capturar vista".<br>' +
-          '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
-        captureBtn.textContent = 'Capturar vista';
+        updateBanner();
+        captureBtn.textContent = '📸 Añadir vista';
         drawOverlayBox();
         return;
     }
     if (mode === 'object') {
         if (currentStep >= steps.length) {
             mode = 'done';
+            updateBanner();
             showResults(views);
             return;
         }
-        // Captura la vista y el rectángulo del objeto
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        // Guardar el rectángulo actual
-        const rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
-        views.push({
-            width: rect.w,
-            height: rect.h,
-            depth: rect.w // Para demo, usar w como profundidad
-        });
-        currentStep++;
-        if (currentStep < steps.length) {
-            let viewName = steps[currentStep].replace('Captura la ', '').replace(' del objeto.', '');
-            updateBanner('<b>Paso 2: Escaneo del objeto</b><br>' +
-              '<span style="font-size:1.3em;">📦</span><br>' +
-              'Ajusta el rectángulo dorado para la vista <b>' + viewName + '</b> y pulsa "Capturar vista".<br>' +
-              '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
-            drawOverlayBox();
-        } else {
-            mode = 'done';
-            updateBanner('<b>¡Escaneo completo!</b><br>Procesando medidas y volumen...');
-            showResults(views);
-        }
+        // Mostrar spinner de carga breve
+        loadingSpinner.style.display = 'block';
+        setTimeout(() => {
+            loadingSpinner.style.display = 'none';
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
+            views.push({
+                width: rect.w,
+                height: rect.h,
+                depth: rect.w
+            });
+            currentStep++;
+            if (currentStep < steps.length) {
+                updateBanner();
+                drawOverlayBox();
+            } else {
+                mode = 'done';
+                updateBanner();
+                showResults(views);
+            }
+        }, 700); // animación de carga breve
     }
 });
 
@@ -293,10 +304,25 @@ overlay.addEventListener('touchstart', overlayDown, {passive:false});
 overlay.addEventListener('touchmove', overlayMove, {passive:false});
 overlay.addEventListener('touchend', overlayUp);
 
+
 resetBtn.addEventListener('click', () => {
     views = [];
+    pxPerCm = null;
+    refRect = null;
+    objRects = [];
+    mode = 'reference';
+    currentStep = 0;
     updateViewsList();
     clearResults();
+    updateBanner('<b>Paso 1: Referencia de escala</b><br>' +
+      '<span style="font-size:1.5em;">💳</span><br>' +
+      'Ajusta el rectángulo azul para que encierre tu tarjeta de crédito, DNI o regla (8.5cm de ancho recomendado).<br>' +
+      '<span style="color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span><br>' +
+      '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
+    drawOverlayBox();
+    captureBtn.textContent = 'Capturar referencia';
+    captureBtn.disabled = false;
+    updateProgressBar();
 });
 
 function updateViewsList() {
@@ -326,32 +352,37 @@ function simulateObjectDetection(width, height) {
     };
 }
 
+
 function showResults(views) {
-    if (views.length < 4) {
-        clearResults();
-        return;
-    }
-    // Tomar el máximo de cada dimensión como aproximación del volumen total
-    const maxWidthPx = Math.max(...views.map(v => v.width));
-    const maxHeightPx = Math.max(...views.map(v => v.height));
-    const maxDepthPx = Math.max(...views.map(v => v.depth));
-    let dimsText = `Medidas estimadas:<br><b>Largo:</b> ${maxWidthPx} px<br><b>Alto:</b> ${maxHeightPx} px<br><b>Ancho:</b> ${maxDepthPx} px`;
-    let volText = '';
-    if (pxPerCm) {
-        const widthCm = (maxWidthPx / pxPerCm).toFixed(1);
-        const heightCm = (maxHeightPx / pxPerCm).toFixed(1);
-        const depthCm = (maxDepthPx / pxPerCm).toFixed(1);
-        const volumeCm3 = (widthCm * heightCm * depthCm).toFixed(0);
-        const volumeM3 = (volumeCm3 / 1e6).toFixed(4);
-        dimsText = `Medidas estimadas:<br><b>Largo:</b> ${widthCm} cm<br><b>Alto:</b> ${heightCm} cm<br><b>Ancho:</b> ${depthCm} cm`;
-        volText = `<b>Volumen estimado:</b> ${volumeCm3} cm³<br>(${volumeM3} m³)`;
-    } else {
-        const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
-        volText = `<b>Volumen estimado:</b> ${volumePx3} px³ (estimación relativa)`;
-    }
-    dimensionsDiv.innerHTML = dimsText;
-    percentageDiv.innerHTML = volText;
-    render3DObject(maxWidthPx, maxHeightPx, maxDepthPx, 400, true);
+    loadingSpinner.style.display = 'block';
+    setTimeout(() => {
+        loadingSpinner.style.display = 'none';
+        if (views.length < 4) {
+            clearResults();
+            return;
+        }
+        // Tomar el máximo de cada dimensión como aproximación del volumen total
+        const maxWidthPx = Math.max(...views.map(v => v.width));
+        const maxHeightPx = Math.max(...views.map(v => v.height));
+        const maxDepthPx = Math.max(...views.map(v => v.depth));
+        let dimsText = `Medidas estimadas:<br><b>Largo:</b> ${maxWidthPx} px<br><b>Alto:</b> ${maxHeightPx} px<br><b>Ancho:</b> ${maxDepthPx} px`;
+        let volText = '';
+        if (pxPerCm) {
+            const widthCm = (maxWidthPx / pxPerCm).toFixed(1);
+            const heightCm = (maxHeightPx / pxPerCm).toFixed(1);
+            const depthCm = (maxDepthPx / pxPerCm).toFixed(1);
+            const volumeCm3 = (widthCm * heightCm * depthCm).toFixed(0);
+            const volumeM3 = (volumeCm3 / 1e6).toFixed(4);
+            dimsText = `Medidas estimadas:<br><b>Largo:</b> ${widthCm} cm<br><b>Alto:</b> ${heightCm} cm<br><b>Ancho:</b> ${depthCm} cm`;
+            volText = `<b>Volumen estimado:</b> ${volumeCm3} cm³<br>(${volumeM3} m³)`;
+        } else {
+            const volumePx3 = maxWidthPx * maxHeightPx * maxDepthPx;
+            volText = `<b>Volumen estimado:</b> ${volumePx3} px³ (estimación relativa)`;
+        }
+        dimensionsDiv.innerHTML = dimsText;
+        percentageDiv.innerHTML = volText;
+        render3DObject(maxWidthPx, maxHeightPx, maxDepthPx, 400, true);
+    }, 900);
 }
 // Redibujar overlay en cada frame de video
 video.addEventListener('play', function() {
