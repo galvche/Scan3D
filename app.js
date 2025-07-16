@@ -42,6 +42,8 @@ function drawOverlayBox() {
     overlay.height = video.videoHeight;
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
+    // Margen interno para que el recuadro nunca se pegue al borde
+    const margin = Math.max(overlay.width, overlay.height) * 0.025; // 2.5% del lado
     if (mode === 'reference') {
         // Dibuja el rectángulo de referencia
         if (!refRect) {
@@ -50,6 +52,11 @@ function drawOverlayBox() {
             const h = overlay.height * 0.18;
             refRect = {x: (overlay.width-w)/2, y: (overlay.height-h)/2, w, h};
         }
+        // Limitar el rectángulo para que no se pegue al borde
+        refRect.x = Math.max(margin, refRect.x);
+        refRect.y = Math.max(margin, refRect.y);
+        refRect.w = Math.min(refRect.w, overlay.width - refRect.x - margin);
+        refRect.h = Math.min(refRect.h, overlay.height - refRect.y - margin);
         ctx.strokeStyle = '#00eaff';
         ctx.lineWidth = 4;
         ctx.setLineDash([10, 8]);
@@ -69,7 +76,13 @@ function drawOverlayBox() {
         });
     } else if (mode === 'object') {
         // Dibuja el rectángulo del objeto
-        const rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
+        let rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
+        // Limitar el rectángulo para que no se pegue al borde
+        rect.x = Math.max(margin, rect.x);
+        rect.y = Math.max(margin, rect.y);
+        rect.w = Math.min(rect.w, overlay.width - rect.x - margin);
+        rect.h = Math.min(rect.h, overlay.height - rect.y - margin);
+        objRects[currentStep] = rect;
         ctx.strokeStyle = '#ffd700';
         ctx.lineWidth = 4;
         ctx.setLineDash([16, 10]);
