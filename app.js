@@ -16,6 +16,12 @@ const steps = [
     'Captura la vista LATERAL IZQUIERDA.',
     'Captura la vista LATERAL DERECHA.'
 ];
+let mode = 'reference'; // 'reference', 'object', 'done'
+let refRect = null; // {x, y, w, h} en referencia
+let dragHandle = null;
+let isDragging = false;
+let dragOffset = {x:0, y:0};
+let objRects = [];
 let currentStep = 0;
 let pxPerCm = null;
 let markingReference = false;
@@ -33,31 +39,51 @@ function drawOverlayBox() {
     overlay.height = video.videoHeight;
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
-    // Dibuja un recuadro central para guiar al usuario
-    const boxSize = Math.floor(Math.min(overlay.width, overlay.height) * 0.7);
-    const x = (overlay.width - boxSize) / 2;
-    const y = (overlay.height - boxSize) / 2;
-    ctx.strokeStyle = '#ffd700';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([16, 10]);
-    ctx.strokeRect(x, y, boxSize, boxSize);
-    ctx.setLineDash([]);
-    // Si está marcando referencia, dibuja los puntos
-    if (markingReference && refPoints.length > 0) {
-        ctx.fillStyle = '#ff4c4c';
-        refPoints.forEach(p => {
+    if (mode === 'reference') {
+        // Dibuja el rectángulo de referencia
+        if (!refRect) {
+            // Inicializar centrado
+            const w = overlay.width * 0.5;
+            const h = overlay.height * 0.18;
+            refRect = {x: (overlay.width-w)/2, y: (overlay.height-h)/2, w, h};
+        }
+        ctx.strokeStyle = '#00eaff';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([10, 8]);
+        ctx.strokeRect(refRect.x, refRect.y, refRect.w, refRect.h);
+        ctx.setLineDash([]);
+        // Esquinas para redimensionar
+        ctx.fillStyle = '#ffd700';
+        [
+            [refRect.x, refRect.y],
+            [refRect.x+refRect.w, refRect.y],
+            [refRect.x, refRect.y+refRect.h],
+            [refRect.x+refRect.w, refRect.y+refRect.h]
+        ].forEach(([x, y]) => {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 10, 0, 2 * Math.PI);
+            ctx.arc(x, y, 12, 0, 2*Math.PI);
             ctx.fill();
         });
-        if (refPoints.length === 2) {
-            ctx.strokeStyle = '#ff4c4c';
-            ctx.lineWidth = 3;
+    } else if (mode === 'object') {
+        // Dibuja el rectángulo del objeto
+        const rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([16, 10]);
+        ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.setLineDash([]);
+        // Esquinas para redimensionar
+        ctx.fillStyle = '#00eaff';
+        [
+            [rect.x, rect.y],
+            [rect.x+rect.w, rect.y],
+            [rect.x, rect.y+rect.h],
+            [rect.x+rect.w, rect.y+rect.h]
+        ].forEach(([x, y]) => {
             ctx.beginPath();
-            ctx.moveTo(refPoints[0].x, refPoints[0].y);
-            ctx.lineTo(refPoints[1].x, refPoints[1].y);
-            ctx.stroke();
-        }
+            ctx.arc(x, y, 12, 0, 2*Math.PI);
+            ctx.fill();
+        });
     }
 }
 
@@ -105,44 +131,19 @@ activateCameraBtn.addEventListener('click', () => {
     currentStep = 0;
     views = [];
     pxPerCm = null;
-    markingReference = false;
-    refPoints = [];
-    // Pedir referencia ANTES de cualquier foto
-    updateBanner('<b>Marca los extremos de la referencia:</b><br>' +
-      '<span style="font-size:1.5em;">💳</span><br>' +
-      '1. Coloca una tarjeta de crédito, regla o cualquier objeto cuyo tamaño conozcas dentro del recuadro dorado.<br>' +
-      '2. Toca sobre la imagen los dos extremos de ese objeto.<br>' +
-      '<span style="font-size:0.95em;color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span>');
+    refRect = null;
+    objRects = [];
+    mode = 'reference';
+    updateBanner('<b>Ajusta el rectángulo azul a tu tarjeta de crédito o regla y pulsa "Capturar referencia".</b><br><span style="font-size:1.5em;">💳</span><br>Esto servirá para calcular las medidas reales del objeto.');
     startCamera();
-    // Esperar a que la cámara esté lista para permitir marcar referencia
     video.onloadedmetadata = () => {
         overlay.width = video.videoWidth;
         overlay.height = video.videoHeight;
         drawOverlayBox();
-        markingReference = true;
-        refPoints = [];
         overlay.style.pointerEvents = 'auto';
-        captureBtn.disabled = true;
-        overlay.onclick = function(e) {
-            const rect = overlay.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (overlay.width / rect.width);
-            const y = (e.clientY - rect.top) * (overlay.height / rect.height);
-            refPoints.push({x, y});
-            drawOverlayBox();
-            if (refPoints.length === 2) {
-                overlay.style.pointerEvents = 'none';
-                markingReference = false;
-                // Calcular distancia en píxeles
-                const dx = refPoints[0].x - refPoints[1].x;
-                const dy = refPoints[0].y - refPoints[1].y;
-                const distPx = Math.sqrt(dx*dx + dy*dy);
-                // Asumimos tarjeta de crédito estándar (8.5cm)
-                pxPerCm = distPx / 8.5;
-                updateBanner();
-                captureBtn.disabled = false;
-            }
-        };
     };
+    captureBtn.textContent = 'Capturar referencia';
+    captureBtn.disabled = false;
 });
 
 function updateBanner(msg) {
@@ -158,22 +159,103 @@ function updateBanner(msg) {
 }
 
 captureBtn.addEventListener('click', () => {
-    if (currentStep >= steps.length) return;
-    // Ya no se pide referencia aquí, solo capturar vistas
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    // Simulación de detección de objeto y cálculo de dimensiones
-    const simulated = simulateObjectDetection(canvas.width, canvas.height);
-    views.push(simulated);
-    updateViewsList();
-    currentStep++;
-    updateBanner();
-    if (currentStep === steps.length) {
-        showResults(views);
+    if (mode === 'reference') {
+        // Calcular px/cm usando el ancho del rectángulo (asume 8.5cm)
+        pxPerCm = refRect.w / 8.5;
+        mode = 'object';
+        currentStep = 0;
+        updateBanner(steps[currentStep]);
+        captureBtn.textContent = 'Capturar vista';
+        drawOverlayBox();
+        return;
+    }
+    if (mode === 'object') {
+        if (currentStep >= steps.length) {
+            mode = 'done';
+            showResults(views);
+            return;
+        }
+        // Captura la vista y el rectángulo del objeto
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Guardar el rectángulo actual
+        const rect = objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6};
+        views.push({
+            width: rect.w,
+            height: rect.h,
+            depth: rect.w // Para demo, usar w como profundidad
+        });
+        currentStep++;
+        if (currentStep < steps.length) {
+            updateBanner(steps[currentStep]);
+            drawOverlayBox();
+        } else {
+            mode = 'done';
+            showResults(views);
+        }
     }
 });
+// Overlay interactivo para mover/redimensionar el rectángulo
+overlay.addEventListener('mousedown', function(e) {
+    if (mode !== 'reference' && mode !== 'object') return;
+    const rect = overlay.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (overlay.width / rect.width);
+    const my = (e.clientY - rect.top) * (overlay.height / rect.height);
+    let r = (mode === 'reference') ? refRect : (objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6});
+    // ¿Click en handle?
+    const handles = [
+        [r.x, r.y],
+        [r.x+r.w, r.y],
+        [r.x, r.y+r.h],
+        [r.x+r.w, r.y+r.h]
+    ];
+    for (let i=0; i<handles.length; i++) {
+        const [hx, hy] = handles[i];
+        if (Math.abs(mx-hx)<18 && Math.abs(my-hy)<18) {
+            dragHandle = i;
+            isDragging = true;
+            return;
+        }
+    }
+    // ¿Click dentro del rectángulo?
+    if (mx > r.x && mx < r.x+r.w && my > r.y && my < r.y+r.h) {
+        dragHandle = 'move';
+        isDragging = true;
+        dragOffset = {x: mx - r.x, y: my - r.y};
+    }
+});
+overlay.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    const rect = overlay.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (overlay.width / rect.width);
+    const my = (e.clientY - rect.top) * (overlay.height / rect.height);
+    let r = (mode === 'reference') ? refRect : (objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6});
+    if (dragHandle === 'move') {
+        r.x = mx - dragOffset.x;
+        r.y = my - dragOffset.y;
+    } else if (typeof dragHandle === 'number') {
+        // Redimensionar según handle
+        switch(dragHandle) {
+            case 0: // top-left
+                r.w += r.x - mx; r.h += r.y - my; r.x = mx; r.y = my; break;
+            case 1: // top-right
+                r.w = mx - r.x; r.h += r.y - my; r.y = my; break;
+            case 2: // bottom-left
+                r.w += r.x - mx; r.x = mx; r.h = my - r.y; break;
+            case 3: // bottom-right
+                r.w = mx - r.x; r.h = my - r.y; break;
+        }
+        // Mínimo tamaño
+        r.w = Math.max(30, r.w); r.h = Math.max(20, r.h);
+    }
+    if (mode === 'reference') refRect = r;
+    else objRects[currentStep] = r;
+    drawOverlayBox();
+});
+overlay.addEventListener('mouseup', function() { isDragging = false; dragHandle = null; });
+overlay.addEventListener('mouseleave', function() { isDragging = false; dragHandle = null; });
 
 resetBtn.addEventListener('click', () => {
     views = [];
