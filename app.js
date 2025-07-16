@@ -107,34 +107,20 @@ activateCameraBtn.addEventListener('click', () => {
     pxPerCm = null;
     markingReference = false;
     refPoints = [];
-    updateBanner();
+    // Pedir referencia ANTES de cualquier foto
+    updateBanner('<b>Marca los extremos de la referencia:</b><br>' +
+      '<span style="font-size:1.5em;">💳</span><br>' +
+      '1. Coloca una tarjeta de crédito, regla o cualquier objeto cuyo tamaño conozcas dentro del recuadro dorado.<br>' +
+      '2. Toca sobre la imagen los dos extremos de ese objeto.<br>' +
+      '<span style="font-size:0.95em;color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span>');
     startCamera();
-});
-
-function updateBanner(msg) {
-    if (msg) {
-        banner.innerHTML = msg;
-        return;
-    }
-    if (currentStep < steps.length) {
-        banner.textContent = steps[currentStep];
-    } else {
-        banner.textContent = '¡Listo! Procesando el volumen estimado...';
-    }
-}
-
-captureBtn.addEventListener('click', () => {
-    if (currentStep >= steps.length) return;
-    if (currentStep === 0 && !pxPerCm) {
-        // Mostrar overlay interactivo antes de capturar
+    // Esperar a que la cámara esté lista para permitir marcar referencia
+    video.onloadedmetadata = () => {
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        drawOverlayBox();
         markingReference = true;
         refPoints = [];
-        updateBanner('<b>Marca los extremos de la referencia:</b><br>' +
-          '<span style="font-size:1.5em;">💳</span><br>' +
-          '1. Coloca una tarjeta de crédito, regla o cualquier objeto cuyo tamaño conozcas dentro del recuadro dorado.<br>' +
-          '2. Toca sobre la imagen los dos extremos de ese objeto.<br>' +
-          '<span style="font-size:0.95em;color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span>');
-        drawOverlayBox();
         overlay.style.pointerEvents = 'auto';
         captureBtn.disabled = true;
         overlay.onclick = function(e) {
@@ -156,8 +142,24 @@ captureBtn.addEventListener('click', () => {
                 captureBtn.disabled = false;
             }
         };
+    };
+});
+
+function updateBanner(msg) {
+    if (msg) {
+        banner.innerHTML = msg;
         return;
     }
+    if (currentStep < steps.length) {
+        banner.textContent = steps[currentStep];
+    } else {
+        banner.textContent = '¡Listo! Procesando el volumen estimado...';
+    }
+}
+
+captureBtn.addEventListener('click', () => {
+    if (currentStep >= steps.length) return;
+    // Ya no se pide referencia aquí, solo capturar vistas
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
