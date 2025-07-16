@@ -18,6 +18,86 @@ const cameraActivateContainer = document.getElementById('camera-activate-contain
 const cameraSelect = document.getElementById('camera-select');
 const cameraHelp = document.getElementById('camera-help');
 
+// NUEVOS ELEMENTOS PARA CAPAS Y BOTÓN "SACAR"
+const layersButton = document.createElement('button');
+layersButton.id = 'layers-button';
+layersButton.textContent = '+';
+layersButton.title = 'Seleccionar capas';
+layersButton.style.position = 'absolute';
+layersButton.style.top = '10px';
+layersButton.style.right = '80px';
+layersButton.style.backgroundColor = '#007FFF'; // Azul Airbus
+layersButton.style.color = 'white';
+layersButton.style.border = 'none';
+layersButton.style.borderRadius = '4px';
+layersButton.style.width = '32px';
+layersButton.style.height = '32px';
+layersButton.style.cursor = 'pointer';
+layersButton.style.fontSize = '24px';
+layersButton.style.fontWeight = 'bold';
+layersButton.style.zIndex = '1000';
+
+const layersMenu = document.createElement('div');
+layersMenu.id = 'layers-menu';
+layersMenu.style.position = 'absolute';
+layersMenu.style.top = '50px';
+layersMenu.style.right = '80px';
+layersMenu.style.backgroundColor = '#222';
+layersMenu.style.border = '1px solid #007FFF';
+layersMenu.style.borderRadius = '4px';
+layersMenu.style.padding = '8px';
+layersMenu.style.display = 'none';
+layersMenu.style.zIndex = '1000';
+
+// Ejemplo de capas - adaptar según su implementación real
+const capas = ['Capa 1', 'Capa 2', 'Capa 3'];
+const capasCheckboxes = [];
+
+capas.forEach((capa, i) => {
+    const label = document.createElement('label');
+    label.style.display = 'block';
+    label.style.color = 'white';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true; // Por defecto activadas
+    checkbox.dataset.layerIndex = i;
+    capasCheckboxes.push(checkbox);
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(' ' + capa));
+    layersMenu.appendChild(label);
+});
+
+document.body.appendChild(layersButton);
+document.body.appendChild(layersMenu);
+
+layersButton.addEventListener('click', () => {
+    layersMenu.style.display = layersMenu.style.display === 'none' ? 'block' : 'none';
+});
+
+// Botón SACAR, abajo a la derecha
+const sacarBtn = document.createElement('button');
+sacarBtn.id = 'sacar-button';
+sacarBtn.textContent = 'Sacar';
+sacarBtn.style.position = 'fixed';
+sacarBtn.style.bottom = '20px';
+sacarBtn.style.right = '20px';
+sacarBtn.style.backgroundColor = '#007FFF'; // Azul Airbus
+sacarBtn.style.color = 'white';
+sacarBtn.style.border = 'none';
+sacarBtn.style.borderRadius = '8px';
+sacarBtn.style.padding = '12px 24px';
+sacarBtn.style.fontSize = '18px';
+sacarBtn.style.fontWeight = 'bold';
+sacarBtn.style.cursor = 'pointer';
+sacarBtn.style.zIndex = '1000';
+
+document.body.appendChild(sacarBtn);
+
+// Aquí puede añadir la funcionalidad que quiera para el botón "Sacar"
+sacarBtn.addEventListener('click', () => {
+    alert('Funcionalidad de sacar aún no implementada, señor Stark.');
+});
+
 let views = [];
 const steps = [
     'Captura la vista FRONTAL del objeto.',
@@ -123,15 +203,18 @@ async function startCamera(deviceId) {
         captureBtn.style.display = '';
         resetBtn.style.display = '';
         cameraActivateContainer.style.display = 'none';
+
         video.onloadedmetadata = () => {
             overlay.width = video.videoWidth;
             overlay.height = video.videoHeight;
             drawOverlayBox();
+            updateDimensionsDisplay();
         };
         video.onplay = () => {
             overlay.width = video.videoWidth;
             overlay.height = video.videoHeight;
             drawOverlayBox();
+            updateDimensionsDisplay();
         };
     } catch (err) {
         cameraErrorDiv.textContent = 'No se pudo acceder a la cámara. Revisa los permisos del navegador o prueba con otro navegador.';
@@ -139,290 +222,218 @@ async function startCamera(deviceId) {
     }
 }
 
-async function getCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.filter(d => d.kind === 'videoinput');
-}
-
-// Inicializar selector de cámara
-getCameras().then(cameras => {
-    if (cameras.length > 1) {
-        cameraSelect.innerHTML = '';
-        cameras.forEach((cam, i) => {
-            const label = cam.label || `Cámara ${i + 1}`;
-            const opt = document.createElement('option');
-            opt.value = cam.deviceId;
-            opt.textContent = label;
-            cameraSelect.appendChild(opt);
-        });
-        cameraSelect.style.display = 'inline-block';
-    } else {
-        cameraSelect.style.display = 'none';
-    }
-});
-
-cameraSelect.addEventListener('change', () => {
-    startCamera(cameraSelect.value);
-});
-
-activateCameraBtn.addEventListener('click', () => {
-    currentStep = 0;
-    views = [];
-    pxPerCm = null;
-    refRect = null;
-    objRects = [];
-    mode = 'reference';
-    updateBanner('<b>Paso 1: Referencia de escala</b><br>' +
-        '<span style="font-size:1.5em;">💳</span><br>' +
-        'Ajusta el rectángulo azul para que encierre tu tarjeta de crédito, DNI o regla (8.5cm de ancho recomendado).<br>' +
-        '<span style="color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span><br>' +
-        '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
-    startCamera();
-    video.onloadedmetadata = () => {
-        overlay.width = video.videoWidth;
-        overlay.height = video.videoHeight;
-        drawOverlayBox();
-        overlay.style.pointerEvents = 'auto';
-    };
-    captureBtn.textContent = 'Capturar referencia';
-    captureBtn.disabled = false;
-});
-
-function updateProgressBar() {
-    const totalSteps = 1 + steps.length; // referencia + vistas
-    const current = mode === 'reference' ? 1 : (mode === 'object' ? currentStep + 2 : totalSteps);
-    const percent = Math.round((current / totalSteps) * 100);
-    progressBarFill.style.width = percent + '%';
-    progressLabel.textContent = `Paso ${current}/${totalSteps}`;
-}
-
-function updateBanner(msg) {
-    updateProgressBar();
-    if (msg) {
-        banner.innerHTML = msg;
+function updateDimensionsDisplay() {
+    let rect = (mode === 'reference') ? refRect : objRects[currentStep];
+    if (!rect) {
+        dimensionsDiv.textContent = 'Área no seleccionada';
+        percentageDiv.textContent = '';
         return;
     }
-    if (currentStep < steps.length) {
-        const viewName = steps[currentStep].replace('Captura la ', '').replace(' del objeto.', '');
-        banner.innerHTML = `<b>Paso 2: Escaneo del objeto</b><br><span style="font-size:1.3em;">📦</span><br>Vista <b>${viewName}</b><br>${steps[currentStep]}`;
-    } else {
-        banner.innerHTML = '<b>¡Medición completada!</b><br>Puede ver sus vistas capturadas y las dimensiones medidas.';
+    const dims = measureDimensions(rect);
+    if (!dims) {
+        dimensionsDiv.textContent = 'Dimensiones desconocidas';
+        percentageDiv.textContent = '';
+        return;
     }
+    dimensionsDiv.textContent = `Ancho: ${dims.widthCm.toFixed(2)} cm, Alto: ${dims.heightCm.toFixed(2)} cm`;
+
+    // Mostrar porcentaje del área respecto al total del video
+    const areaSelected = rect.w * rect.h;
+    const areaTotal = overlay.width * overlay.height;
+    const percent = (areaSelected / areaTotal) * 100;
+    percentageDiv.textContent = `Área seleccionada: ${percent.toFixed(1)}% del total`;
 }
 
 function measureDimensions(rect) {
-    if (!pxPerCm) return null;
-    const widthCm = rect.w / pxPerCm;
-    const heightCm = rect.h / pxPerCm;
-    return {widthCm, heightCm};
+    if (!rect || !pxPerCm) return null;
+    return {
+        widthCm: rect.w / pxPerCm,
+        heightCm: rect.h / pxPerCm
+    };
+}
+
+function canvasCoordinates(event) {
+    const rect = overlay.getBoundingClientRect();
+    let x, y;
+    if (event.touches) {
+        x = event.touches[0].clientX - rect.left;
+        y = event.touches[0].clientY - rect.top;
+    } else {
+        x = event.clientX - rect.left;
+        y = event.clientY - rect.top;
+    }
+    return { x, y };
+}
+
+function getHandleUnderPoint(rect, x, y) {
+    const handles = [
+        {name: 'tl', x: rect.x, y: rect.y},
+        {name: 'tr', x: rect.x + rect.w, y: rect.y},
+        {name: 'bl', x: rect.x, y: rect.y + rect.h},
+        {name: 'br', x: rect.x + rect.w, y: rect.y + rect.h},
+    ];
+    for (let h of handles) {
+        if (Math.abs(x - h.x) < 15 && Math.abs(y - h.y) < 15) return h.name;
+    }
+    return null;
+}
+
+function pointerDown(event) {
+    event.preventDefault();
+    const {x, y} = canvasCoordinates(event);
+    let rect = (mode === 'reference') ? refRect : objRects[currentStep];
+    if (!rect) return;
+    let handle = getHandleUnderPoint(rect, x, y);
+    if (handle) {
+        dragHandle = handle;
+        isDragging = true;
+    } else if (x > rect.x && x < rect.x + rect.w && y > rect.y && y < rect.y + rect.h) {
+        dragHandle = 'move';
+        isDragging = true;
+        dragOffset.x = x - rect.x;
+        dragOffset.y = y - rect.y;
+    }
+}
+
+function pointerMove(event) {
+    if (!isDragging) return;
+    event.preventDefault();
+    const {x, y} = canvasCoordinates(event);
+    let rect = (mode === 'reference') ? refRect : objRects[currentStep];
+    if (!rect) return;
+    switch (dragHandle) {
+        case 'tl':
+            rect.w += rect.x - x;
+            rect.h += rect.y - y;
+            rect.x = x;
+            rect.y = y;
+            break;
+        case 'tr':
+            rect.w = x - rect.x;
+            rect.h += rect.y - y;
+            rect.y = y;
+            break;
+        case 'bl':
+            rect.w += rect.x - x;
+            rect.x = x;
+            rect.h = y - rect.y;
+            break;
+        case 'br':
+            rect.w = x - rect.x;
+            rect.h = y - rect.y;
+            break;
+        case 'move':
+            rect.x = x - dragOffset.x;
+            rect.y = y - dragOffset.y;
+            break;
+    }
+    if (mode === 'reference') refRect = rect; else objRects[currentStep] = rect;
+    drawOverlayBox();
+    updateDimensionsDisplay();
+}
+
+function pointerUp(event) {
+    isDragging = false;
+    dragHandle = null;
 }
 
 captureBtn.addEventListener('click', () => {
     if (mode === 'reference') {
-        // Calcular pxPerCm usando la tarjeta estándar: 8.5 cm de ancho
-        const standardWidthCm = 8.5;
-        pxPerCm = refRect.w / standardWidthCm;
-        mode = 'object';
-        updateBanner();
-        captureBtn.textContent = 'Capturar vista';
-        objRects[currentStep] = null;
-        drawOverlayBox();
-    } else if (mode === 'object') {
-        // Capturar vista
-        if (!objRects[currentStep]) {
-            alert('Por favor, ajuste el rectángulo antes de capturar.');
+        if (!refRect) {
+            alert('Por favor, seleccione un área de referencia primero.');
             return;
         }
-        // Guardar imagen de la cámara recortada a la selección
+        // Pedir tamaño real para establecer pxPerCm
+        let input = prompt('Ingrese la anchura real en cm del área seleccionada (referencia):');
+        if (!input || isNaN(input) || input <= 0) {
+            alert('Valor inválido.');
+            return;
+        }
+        const refCm = parseFloat(input);
+        pxPerCm = refRect.w / refCm;
+        mode = 'object';
+        currentStep = 0;
+        views = [];
+        objRects = [];
+        alert(steps[currentStep]);
+        drawOverlayBox();
+        updateDimensionsDisplay();
+        banner.textContent = steps[currentStep];
+    } else if (mode === 'object') {
+        if (!objRects[currentStep]) {
+            alert('Por favor, seleccione un área para esta vista.');
+            return;
+        }
+        // Capturar imagen dentro del rectángulo seleccionado
+        const rect = objRects[currentStep];
+        canvas.width = rect.w;
+        canvas.height = rect.h;
         const ctx = canvas.getContext('2d');
-        canvas.width = objRects[currentStep].w;
-        canvas.height = objRects[currentStep].h;
-        ctx.drawImage(video,
-            objRects[currentStep].x, objRects[currentStep].y,
-            objRects[currentStep].w, objRects[currentStep].h,
-            0, 0,
-            objRects[currentStep].w, objRects[currentStep].h);
-        const imgDataUrl = canvas.toDataURL('image/png');
-        views[currentStep] = {
-            img: imgDataUrl,
-            dims: measureDimensions(objRects[currentStep]),
-            rect: {...objRects[currentStep]}
-        };
+        ctx.drawImage(video, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+        const dataUrl = canvas.toDataURL('image/png');
+        views[currentStep] = dataUrl;
         currentStep++;
         if (currentStep >= steps.length) {
             mode = 'done';
-            captureBtn.disabled = true;
-            resetBtn.style.display = '';
-            updateBanner();
-            showCapturedViews();
+            banner.textContent = 'Captura completa. Gracias, señor Stark.';
+            alert('Captura completa. Puede descargar o continuar con otro proceso.');
+            // Aquí puede agregar la función para descargar o visualizar las capturas
         } else {
-            objRects[currentStep] = null;
-            updateBanner();
+            banner.textContent = steps[currentStep];
+            alert(steps[currentStep]);
             drawOverlayBox();
+            updateDimensionsDisplay();
         }
     }
 });
 
 resetBtn.addEventListener('click', () => {
-    currentStep = 0;
-    views = [];
-    pxPerCm = null;
-    refRect = null;
-    objRects = [];
-    mode = 'reference';
-    updateBanner('<b>Paso 1: Referencia de escala</b><br>' +
-        '<span style="font-size:1.5em;">💳</span><br>' +
-        'Ajusta el rectángulo azul para que encierre tu tarjeta de crédito, DNI o regla (8.5cm de ancho recomendado).<br>' +
-        '<span style="color:#ffd700;">Esto servirá para calcular las medidas reales del objeto.</span><br>' +
-        '<span style="font-size:0.95em; color:#aaa;">Puedes mover y redimensionar el rectángulo con el dedo o ratón.</span>');
-    captureBtn.textContent = 'Capturar referencia';
-    captureBtn.disabled = false;
+    if (mode === 'reference') {
+        refRect = null;
+        pxPerCm = null;
+    } else if (mode === 'object') {
+        objRects[currentStep] = null;
+    }
     drawOverlayBox();
+    updateDimensionsDisplay();
 });
 
-function showCapturedViews() {
-    viewsList.innerHTML = '';
-    views.forEach((view, i) => {
-        const div = document.createElement('div');
-        div.className = 'view-item';
-        div.innerHTML = `
-            <img src="${view.img}" alt="Vista ${i + 1}" width="160" style="border:1px solid #666; border-radius:8px;">
-            <div>Dimensiones aprox: ${view.dims.widthCm.toFixed(1)}cm x ${view.dims.heightCm.toFixed(1)}cm</div>
-        `;
-        viewsList.appendChild(div);
-    });
-    viewsList.style.display = 'flex';
-    threejsContainer.style.display = 'block';
-}
+overlay.addEventListener('mousedown', pointerDown);
+overlay.addEventListener('touchstart', pointerDown, { passive: false });
+window.addEventListener('mousemove', pointerMove);
+window.addEventListener('touchmove', pointerMove, { passive: false });
+window.addEventListener('mouseup', pointerUp);
+window.addEventListener('touchend', pointerUp);
 
-// Manejo de interacción para mover y redimensionar rectángulos
-overlay.addEventListener('mousedown', startDrag);
-overlay.addEventListener('touchstart', startDrag);
+activateCameraBtn.addEventListener('click', async () => {
+    cameraActivateContainer.style.display = 'none';
+    await startCamera();
+});
 
-overlay.addEventListener('mousemove', onDrag);
-overlay.addEventListener('touchmove', onDrag);
-
-overlay.addEventListener('mouseup', endDrag);
-overlay.addEventListener('mouseleave', endDrag);
-overlay.addEventListener('touchend', endDrag);
-overlay.addEventListener('touchcancel', endDrag);
-
-function getMousePos(evt) {
-    const rect = overlay.getBoundingClientRect();
-    if (evt.touches) {
-        return {
-            x: evt.touches[0].clientX - rect.left,
-            y: evt.touches[0].clientY - rect.top
-        };
-    } else {
-        return {
-            x: evt.clientX - rect.left,
-            y: evt.clientY - rect.top
-        };
+// Llenar selector de cámaras si es posible
+async function populateCameraSelect() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        videoDevices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label || `Cámara ${cameraSelect.length + 1}`;
+            cameraSelect.appendChild(option);
+        });
+        cameraSelect.style.display = videoDevices.length > 1 ? '' : 'none';
+    } catch {
+        cameraSelect.style.display = 'none';
     }
 }
 
-function isOnHandle(pos, rect) {
-    const handles = [
-        {name: 'tl', x: rect.x, y: rect.y},
-        {name: 'tr', x: rect.x + rect.w, y: rect.y},
-        {name: 'bl', x: rect.x, y: rect.y + rect.h},
-        {name: 'br', x: rect.x + rect.w, y: rect.y + rect.h}
-    ];
-    for (const handle of handles) {
-        const dx = pos.x - handle.x;
-        const dy = pos.y - handle.y;
-        if (Math.sqrt(dx*dx + dy*dy) < 15) return handle.name;
-    }
-    return null;
-}
+cameraSelect.addEventListener('change', () => {
+    startCamera(cameraSelect.value);
+});
 
-function startDrag(evt) {
-    evt.preventDefault();
-    const pos = getMousePos(evt);
-    let rect = (mode === 'reference') ? refRect : objRects[currentStep];
-    if (!rect) return;
-
-    const handle = isOnHandle(pos, rect);
-    if (handle) {
-        dragHandle = handle;
-        isDragging = true;
-        dragOffset.x = pos.x;
-        dragOffset.y = pos.y;
-    } else if (pos.x > rect.x && pos.x < rect.x + rect.w && pos.y > rect.y && pos.y < rect.y + rect.h) {
-        dragHandle = 'move';
-        isDragging = true;
-        dragOffset.x = pos.x - rect.x;
-        dragOffset.y = pos.y - rect.y;
-    }
-}
-
-function onDrag(evt) {
-    if (!isDragging) return;
-    evt.preventDefault();
-    const pos = getMousePos(evt);
-    let rect = (mode === 'reference') ? refRect : objRects[currentStep];
-    if (!rect) return;
-
-    const minSize = 30;
-    const maxX = overlay.width;
-    const maxY = overlay.height;
-
-    switch (dragHandle) {
-        case 'move':
-            let newX = pos.x - dragOffset.x;
-            let newY = pos.y - dragOffset.y;
-            newX = Math.min(Math.max(0, newX), maxX - rect.w);
-            newY = Math.min(Math.max(0, newY), maxY - rect.h);
-            rect.x = newX;
-            rect.y = newY;
-            break;
-        case 'tl':
-            const newWtl = rect.w + (rect.x - pos.x);
-            const newHtl = rect.h + (rect.y - pos.y);
-            if (newWtl >= minSize) {
-                rect.x = pos.x;
-                rect.w = newWtl;
-            }
-            if (newHtl >= minSize) {
-                rect.y = pos.y;
-                rect.h = newHtl;
-            }
-            break;
-        case 'tr':
-            const newWtr = pos.x - rect.x;
-            const newHtr = rect.h + (rect.y - pos.y);
-            if (newWtr >= minSize) rect.w = newWtr;
-            if (newHtr >= minSize) {
-                rect.y = pos.y;
-                rect.h = newHtr;
-            }
-            break;
-        case 'bl':
-            const newWbl = rect.w + (rect.x - pos.x);
-            const newHbl = pos.y - rect.y;
-            if (newWbl >= minSize) {
-                rect.x = pos.x;
-                rect.w = newWbl;
-            }
-            if (newHbl >= minSize) rect.h = newHbl;
-            break;
-        case 'br':
-            const newWbr = pos.x - rect.x;
-            const newHbr = pos.y - rect.y;
-            if (newWbr >= minSize) rect.w = newWbr;
-            if (newHbr >= minSize) rect.h = newHbr;
-            break;
-    }
-    drawOverlayBox();
-}
-
-function endDrag(evt) {
-    if (isDragging) {
-        isDragging = false;
-        dragHandle = null;
-    }
-}
-
-updateBanner('<b>Pulse "Activar Cámara" para comenzar.</b>');
-
+// Al iniciar, pedir permisos y mostrar cámara
+window.onload = async () => {
+    await populateCameraSelect();
+    cameraActivateContainer.style.display = '';
+};
