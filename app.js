@@ -109,9 +109,53 @@ async function startCamera() {
             video: { facingMode: 'environment' },
             audio: false
         });
-        video.srcObject = stream;
-        cameraErrorDiv.style.display = 'none';
-        video.style.display = '';
+    cameraHelp.style.display = 'none';
+    video.srcObject = stream;
+    cameraErrorDiv.style.display = 'none';
+    video.style.display = '';
+    captureBtn.style.display = '';
+    resetBtn.style.display = '';
+    cameraActivateContainer.style.display = 'none';
+    // Ajustar overlay al tamaño del video
+    video.onloadedmetadata = () => {
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        drawOverlayBox();
+    };
+    video.onplay = () => {
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        drawOverlayBox();
+    };
+// Selector de cámara y ayuda visual
+const cameraSelect = document.getElementById('camera-select');
+const cameraHelp = document.getElementById('camera-help');
+
+async function getCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(d => d.kind === 'videoinput');
+}
+
+// Inicializar selector de cámara
+getCameras().then(cameras => {
+    if (cameras.length > 1) {
+        cameraSelect.innerHTML = '';
+        cameras.forEach((cam, i) => {
+            const label = cam.label || `Cámara ${i+1}`;
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = label;
+            cameraSelect.appendChild(opt);
+        });
+        cameraSelect.style.display = 'inline-block';
+    } else {
+        cameraSelect.style.display = 'none';
+    }
+});
+
+cameraSelect.addEventListener('change', () => {
+    startCamera(cameraSelect.value);
+});
         captureBtn.style.display = '';
         resetBtn.style.display = '';
         cameraActivateContainer.style.display = 'none';
