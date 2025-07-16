@@ -209,14 +209,28 @@ captureBtn.addEventListener('click', () => {
         }
     }
 });
-// Overlay interactivo para mover/redimensionar el rectángulo
-overlay.addEventListener('mousedown', function(e) {
-    if (mode !== 'reference' && mode !== 'object') return;
+
+// Overlay interactivo para mover/redimensionar el rectángulo (mouse y touch)
+function getOverlayCoords(e) {
     const rect = overlay.getBoundingClientRect();
-    const mx = (e.clientX - rect.left) * (overlay.width / rect.width);
-    const my = (e.clientY - rect.top) * (overlay.height / rect.height);
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    const mx = (clientX - rect.left) * (overlay.width / rect.width);
+    const my = (clientY - rect.top) * (overlay.height / rect.height);
+    return {mx, my};
+}
+
+function overlayDown(e) {
+    if (mode !== 'reference' && mode !== 'object') return;
+    const {mx, my} = getOverlayCoords(e);
     let r = (mode === 'reference') ? refRect : (objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6});
-    // ¿Click en handle?
+    // ¿Click/touch en handle?
     const handles = [
         [r.x, r.y],
         [r.x+r.w, r.y],
@@ -228,21 +242,21 @@ overlay.addEventListener('mousedown', function(e) {
         if (Math.abs(mx-hx)<18 && Math.abs(my-hy)<18) {
             dragHandle = i;
             isDragging = true;
+            e.preventDefault();
             return;
         }
     }
-    // ¿Click dentro del rectángulo?
+    // ¿Click/touch dentro del rectángulo?
     if (mx > r.x && mx < r.x+r.w && my > r.y && my < r.y+r.h) {
         dragHandle = 'move';
         isDragging = true;
         dragOffset = {x: mx - r.x, y: my - r.y};
+        e.preventDefault();
     }
-});
-overlay.addEventListener('mousemove', function(e) {
+}
+function overlayMove(e) {
     if (!isDragging) return;
-    const rect = overlay.getBoundingClientRect();
-    const mx = (e.clientX - rect.left) * (overlay.width / rect.width);
-    const my = (e.clientY - rect.top) * (overlay.height / rect.height);
+    const {mx, my} = getOverlayCoords(e);
     let r = (mode === 'reference') ? refRect : (objRects[currentStep] || {x: overlay.width*0.2, y: overlay.height*0.2, w: overlay.width*0.6, h: overlay.height*0.6});
     if (dragHandle === 'move') {
         r.x = mx - dragOffset.x;
@@ -265,9 +279,19 @@ overlay.addEventListener('mousemove', function(e) {
     if (mode === 'reference') refRect = r;
     else objRects[currentStep] = r;
     drawOverlayBox();
-});
-overlay.addEventListener('mouseup', function() { isDragging = false; dragHandle = null; });
-overlay.addEventListener('mouseleave', function() { isDragging = false; dragHandle = null; });
+    e.preventDefault();
+}
+function overlayUp() { isDragging = false; dragHandle = null; }
+
+// Mouse events
+overlay.addEventListener('mousedown', overlayDown);
+overlay.addEventListener('mousemove', overlayMove);
+overlay.addEventListener('mouseup', overlayUp);
+overlay.addEventListener('mouseleave', overlayUp);
+// Touch events
+overlay.addEventListener('touchstart', overlayDown, {passive:false});
+overlay.addEventListener('touchmove', overlayMove, {passive:false});
+overlay.addEventListener('touchend', overlayUp);
 
 resetBtn.addEventListener('click', () => {
     views = [];
