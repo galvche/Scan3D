@@ -1,45 +1,45 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scan3D App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <h1 style="letter-spacing:2px; font-weight:700; font-size:2.3rem; margin-bottom:8px;">Scan3D App</h1>
-    <div id="progress-bar-container" style="width:100%; max-width:420px; margin:0 auto 12px auto;">
-        <div id="progress-bar" style="height:12px; background:#23272f; border-radius:8px; overflow:hidden;">
-            <div id="progress-bar-fill" style="height:100%; width:0%; background:#00eaff; transition:width 0.4s;"></div>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Scan3D App</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1 style="letter-spacing:2px; font-weight:700; font-size:2.3rem; margin-bottom:8px;">Scan3D App</h1>
+        <div id="progress-bar-container" style="width:100%; max-width:420px; margin:0 auto 12px auto;">
+            <div id="progress-bar" style="height:12px; background:#23272f; border-radius:8px; overflow:hidden;">
+                <div id="progress-bar-fill" style="height:100%; width:0%; background:#00eaff; transition:width 0.4s;"></div>
+            </div>
+            <div id="progress-label" style="text-align:right; font-size:0.95em; color:#ffd700; margin-top:2px;">Paso 1/5</div>
         </div>
-        <div id="progress-label" style="text-align:right; font-size:0.95em; color:#ffd700; margin-top:2px;">Paso 1/5</div>
-    </div>
-    <div id="camera-error" style="display:none; color:#ff4c4c; text-align:center; margin:16px 0; font-weight:bold;"></div>
-    <div id="banner" style="margin-bottom:8px;"></div>
-    <div id="camera-activate-container" style="text-align:center; margin:32px 0;">
-        <select id="camera-select" style="padding:8px 16px; font-size:1.1rem; border-radius:8px; margin-bottom:10px; display:none;"></select><br>
-        <button id="activate-camera" class="btn-main">🔓 Activar cámara</button>
-    </div>
-    <div id="camera-help" style="display:none; color:#ffd700; text-align:center; margin:10px 0 0 0; font-size:1.05em;"></div>
-    <div class="camera-container">
-        <video id="video" autoplay playsinline></video>
-        <canvas id="overlay"></canvas>
-        <div id="loading-spinner" style="display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:10;">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="28" stroke="#00eaff" stroke-width="8" stroke-dasharray="44 44" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="1s" repeatCount="indefinite"/></circle></svg>
+        <div id="camera-error" style="display:none; color:#ff4c4c; text-align:center; margin:16px 0; font-weight:bold;"></div>
+        <div id="banner" style="margin-bottom:8px;"></div>
+        <div id="camera-activate-container" style="text-align:center; margin:32px 0;">
+            <select id="camera-select" style="padding:8px 16px; font-size:1.1rem; border-radius:8px; margin-bottom:10px; display:none;"></select><br>
+            <button id="activate-camera" class="btn-main">🔓 Activar cámara</button>
         </div>
-    </div>
-    <div style="text-align:center; margin-bottom:10px;">
-        <button id="capture" class="btn-main" style="display:none;">📸 Añadir vista</button>
-        <button id="reset" class="btn-secondary" style="display:none;">🔄 Reiniciar escaneo</button>
-    </div>
-    <canvas id="canvas" style="display:none;"></canvas>
-    <div id="views-list" style="text-align:center; margin-bottom:10px;"></div>
-    <div id="result">
-        <div id="dimensions"></div>
-        <div id="percentage"></div>
-        <div id="threejs-container" style="width: 400px; height: 400px;"></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
-    <script src="app.js"></script>
-</body>
-</html>
+        <div id="camera-help" style="display:none; color:#ffd700; text-align:center; margin:10px 0 0 0; font-size:1.05em;"></div>
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="overlay"></canvas>
+            <div id="loading-spinner" style="display:none; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:10;">
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="28" stroke="#00eaff" stroke-width="8" stroke-dasharray="44 44" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="1s" repeatCount="indefinite"/></circle></svg>
+            </div>
+        </div>
+        <div style="text-align:center; margin-bottom:10px;">
+            <button id="capture" class="btn-main" style="display:none;">📸 Añadir vista</button>
+            <button id="reset" class="btn-secondary" style="display:none;">🔄 Reiniciar escaneo</button>
+        </div>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div id="views-list" style="text-align:center; margin-bottom:10px;"></div>
+        <div id="result">
+            <div id="dimensions"></div>
+            <div id="percentage"></div>
+            <div id="threejs-container" style="width: 400px; height: 400px;"></div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+        <script src="app.js"></script>
+    </body>
+    </html>
