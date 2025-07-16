@@ -16,13 +16,13 @@ h1 {
     margin-bottom: 8px;
     font-size: 2.3rem;
 }
-.camera-container {
+ .camera-container {
     position: relative;
     width: 100vw;
     max-width: 420px;
     aspect-ratio: 1/1;
     margin: 0 auto 18px auto;
-    background: #222;
+    background: #000;
     border-radius: 16px;
     box-shadow: 0 4px 24px #0008;
     overflow: hidden;
@@ -34,7 +34,7 @@ h1 {
     height: 100%;
     object-fit: cover;
     border-radius: 16px;
-    background: #222;
+    background: #000;
     z-index: 1;
     display: block;
 }
@@ -162,9 +162,11 @@ h1 {
     .camera-container {
         max-width: 96vw;
         border-radius: 10vw;
+        background: #000;
     }
     #video, #overlay {
         border-radius: 10vw;
+        background: #000;
     }
     #video, #threejs-container {
         width: 98vw;
