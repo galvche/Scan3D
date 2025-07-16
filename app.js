@@ -405,9 +405,9 @@ window.addEventListener('touchmove', pointerMove, { passive: false });
 window.addEventListener('mouseup', pointerUp);
 window.addEventListener('touchend', pointerUp);
 
-activateCameraBtn.addEventListener('click', async () => {
-    cameraActivateContainer.style.display = 'none';
-    await startCamera();
+activateCameraBtn.addEventListener('click', () => {
+    const selectedDeviceId = cameraSelect.value;
+    startCamera(selectedDeviceId);
 });
 
 // Llenar selector de cámaras si es posible
@@ -436,4 +436,27 @@ cameraSelect.addEventListener('change', () => {
 window.onload = async () => {
     await populateCameraSelect();
     cameraActivateContainer.style.display = '';
-};
+}
+async function populateCameraSelect() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        cameraSelect.innerHTML = ''; // limpiar opciones
+        videoDevices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `Cámara ${cameraSelect.length + 1}`;
+            cameraSelect.appendChild(option);
+        });
+        if (videoDevices.length === 0) {
+            cameraErrorDiv.textContent = 'No se encontraron cámaras disponibles.';
+            cameraErrorDiv.style.display = 'block';
+        } else {
+            cameraErrorDiv.style.display = 'none';
+        }
+    } catch (err) {
+        cameraErrorDiv.textContent = 'Error al enumerar cámaras: ' + err.message;
+        cameraErrorDiv.style.display = 'block';
+    }
+}
+;
