@@ -9,7 +9,7 @@ h1 {
     text-align: center;
     margin-top: 32px;
     font-size: 2.2rem;
-    color: #222;
+    color: #fff;
     letter-spacing: 1px;
 }
 #video {
@@ -19,8 +19,8 @@ h1 {
     max-width: 420px;
     height: 240px;
     background: #222;
-    border-radius: 18px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
     object-fit: cover;
 }
 #capture, #reset {
@@ -34,6 +34,26 @@ h1 {
     color: #fff;
     cursor: pointer;
     transition: background 0.2s;
+}
+#reset, #activate-camera {
+    display: inline-block;
+    margin: 8px 8px 16px 8px;
+    padding: 14px 32px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    border: none;
+    background: #23272f;
+    color: #0078d7;
+    border: 2px solid #0078d7;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#capture:hover, #activate-camera:hover {
+    background: #005fa3;
+}
+#reset:hover {
+    background: #23272f;
+    color: #fff;
 }
 #reset {
     background: #fff;
@@ -49,7 +69,7 @@ h1 {
 #views-list {
     text-align: center;
     font-size: 1rem;
-    color: #555;
+    color: #aaa;
     margin-bottom: 10px;
 }
 #result {
@@ -59,13 +79,13 @@ h1 {
 #dimensions, #percentage {
     font-size: 1.1rem;
     margin: 8px 0;
-    color: #333;
+    color: #f1f1f1;
 }
 #threejs-container {
     margin: 0 auto;
-    background: #fff;
+    background: #23272f;
     border-radius: 18px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.20);
     max-width: 420px;
     width: 90vw;
     height: 400px;
