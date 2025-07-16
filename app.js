@@ -105,28 +105,29 @@ function drawOverlayBox() {
 
 async function startCamera() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { ideal: 'environment' },
-            audio: false
-        });
-    cameraHelp.style.display = 'none';
-    video.srcObject = stream;
-    cameraErrorDiv.style.display = 'none';
-    video.style.display = '';
-    captureBtn.style.display = '';
-    resetBtn.style.display = '';
-    cameraActivateContainer.style.display = 'none';
-    // Ajustar overlay al tamaño del video
-    video.onloadedmetadata = () => {
-        overlay.width = video.videoWidth;
-        overlay.height = video.videoHeight;
-        drawOverlayBox();
-    };
-    video.onplay = () => {
-        overlay.width = video.videoWidth;
-        overlay.height = video.videoHeight;
-        drawOverlayBox();
-    };
+        const stream = await getBackCameraStream();
+        video.srcObject = stream;
+        cameraErrorDiv.style.display = 'none';
+        video.style.display = '';
+        captureBtn.style.display = '';
+        resetBtn.style.display = '';
+        cameraActivateContainer.style.display = 'none';
+        video.onloadedmetadata = () => {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+            drawOverlayBox();
+        };
+        video.onplay = () => {
+            overlay.width = video.videoWidth;
+            overlay.height = video.videoHeight;
+            drawOverlayBox();
+        };
+    } catch (err) {
+        cameraErrorDiv.textContent = 'No se pudo acceder a la cámara. Revisa los permisos del navegador o prueba con otro navegador.';
+        cameraErrorDiv.style.display = 'block';
+    }
+}
+
 // Selector de cámara y ayuda visual
 const cameraSelect = document.getElementById('camera-select');
 const cameraHelp = document.getElementById('camera-help');
@@ -482,7 +483,7 @@ function render3DObject(objWidth, objHeight, objDepth, cubeSize, darkMode = fals
     scene.add(light);
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
     dirLight.position.set(1, 2, 2);
-    scene.add(dirLight);
+    scene.add(dirLight);start
 
     // Control de rotación
     let angle = 0;
@@ -494,4 +495,22 @@ function render3DObject(objWidth, objHeight, objDepth, cubeSize, darkMode = fals
         renderer.render(scene, camera);
     }
     animate();
+
+    async function getBackCameraStream() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+    // Buscar cámara trasera por nombre
+    const backCamera = videoDevices.find(device =>
+        device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('trasera')
+    );
+
+    const constraints = {
+        video: backCamera ? { deviceId: backCamera.deviceId } : { facingMode: 'environment' },
+        audio: false
+    };
+
+    return navigator.mediaDevices.getUserMedia(constraints);
+}
+
 }
